@@ -7,16 +7,15 @@ import pandas as pd
 import io
 import datetime
 
-
 def setup_driver():
-    """웹 드라이버 설정"""
     options = Options()
-    options.add_argument('--headless')  # 백그라운드 실행
+    options.add_argument('--headless')
     options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    driver = webdriver.Chrome(options=options)
-    return driver
-
+    options.add_argument('--disable-dev-shm-usage')  # /dev/shm 사용 비활성화 (메모리 절약)
+    options.add_argument('--disable-gpu')  # GPU 가속 비활성화
+    options.add_argument('--single-process')  # 단일 프로세스 모드
+    options.add_argument('--remote-debugging-port=9222')  # 원격 디버깅 포트 지정
+    return webdriver.Chrome(options=options)
 
 def crawl_hitter_data():
     """타자 데이터 크롤링"""
