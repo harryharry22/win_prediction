@@ -21,67 +21,54 @@ def crawl_hitter_data():
     """타자 데이터 크롤링"""
     driver = setup_driver()
 
-    # KBO 타자 기록 URL
-    url = 'https://www.koreabaseball.com/Record/Player/HitterBasic/Basic1.aspx'
-    driver.get(url)
-
-    # 모든 페이지 데이터를 저장할 DataFrame 초기화
-    hitter_data_2025 = pd.DataFrame()
-
     try:
-        # 모든 페이지(1, 2, 3) 크롤링
-        for page in range(1, 4):
-            # 현재 페이지가 1페이지가 아니면 페이지 버튼 클릭
-            if page > 1:
-                try:
-                    page_button = driver.find_element(By.CSS_SELECTOR,
-                                                      f'a#cphContents_cphContents_cphContents_ucPager_btnNo{page}')
-                    page_button.click()
-                    time.sleep(2)  # 페이지 로딩 대기
-                except Exception as e:
-                    print(f"페이지 {page} 이동 중 오류 발생: {e}")
-                    continue
+        # 접속 링크
+        driver.get('https://www.koreabaseball.com/Record/Player/HitterBasic/Basic1.aspx')
+        time.sleep(2)  # 페이지 로딩 대기
 
-            # 페이지 HTML 가져오기
-            html = driver.page_source
-            soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-            # 테이블 헤더 가져오기
-            player_thead = soup.select('div.record_result > table > thead > tr > th')
-            player_columns = [th.text for th in player_thead]
+        player_html = soup.select('div.record_result > table > tbody > tr')
+        player_thead = soup.select('div.record_result > table > thead > tr > th')
 
-            # 테이블 내용 가져오기
-            player_html = soup.select('div.record_result > table > tbody > tr')
+        # 행 전체 저장
+        player_tr = []
 
-            # 페이지 데이터 추출
-            player_data = []
-            for tr in player_html:
-                tds = tr.select('td')
-                player_line = [td.text for td in tds]
-                player_data.append(player_line)
+        # 행 한 줄씩 저장
+        for i in range(len(player_html)):
+            player_tr.append(player_html[i].select('td'))
 
-            # 페이지 데이터를 DataFrame으로 변환
-            page_df = pd.DataFrame(player_data, columns=player_columns)
+        # 전체 표
+        player_data = []
 
-            # 순위 컬럼이 있는 경우 인덱스로 설정
-            if '순위' in page_df.columns:
-                page_df = page_df.set_index('순위')
+        # 모든 내용 뽑기
+        for i in range(len(player_tr)):
+            player_td = player_tr[i]
+            # 한 줄
+            player_line = []
+            for j in range(len(player_td)):
+                # 한 줄 만들기
+                player_line.append(player_td[j].text)
 
-            # 전체 데이터에 현재 페이지 데이터 추가
-            if hitter_data_2025.empty:
-                hitter_data_2025 = page_df
-            else:
-                hitter_data_2025 = pd.concat([hitter_data_2025, page_df])
-            return result
-    
+            # 한 줄씩 넣어서 전체 표 만들기
+            player_data.append(player_line)
+
+        # 데이터 프레임 만들기
+        hitter_data_2025 = pd.DataFrame(player_data)
+
+        player_columns = []
+        for i in range(len(player_thead)):
+            player_columns.append(player_thead[i].text)
+
+        hitter_data_2025.columns = player_columns
+        hitter_data_2025 = hitter_data_2025.set_index('순위')
+
+        hitter_data_2025['연도'] = 2025
+
+        return hitter_data_2025
+
     finally:
-        # Selenium 종료
         driver.quit()
-
-    # '연도'라는 새로운 컬럼을 데이터프레임에 추가하고, 모든 값을 2025로 설정합니다.
-    hitter_data_2025['연도'] = 2025
-
-    return hitter_data_2025
 
 
 def crawl_pitcher_data():
