@@ -1,128 +1,70 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
-import time
 import pandas as pd
 import io
 import datetime
 
-def setup_driver():
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')  # /dev/shm 사용 비활성화 (메모리 절약)
-    options.add_argument('--disable-gpu')  # GPU 가속 비활성화
-    options.add_argument('--single-process')  # 단일 프로세스 모드
-    options.add_argument('--remote-debugging-port=9222')  # 원격 디버깅 포트 지정
-    return webdriver.Chrome(options=options)
-
 def crawl_hitter_data():
-    """타자 데이터 크롤링"""
-    driver = setup_driver()
-
-    try:
-        # 접속 링크
-        driver.get('https://www.koreabaseball.com/Record/Player/HitterBasic/Basic1.aspx')
-        time.sleep(2)  # 페이지 로딩 대기
-
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-        player_html = soup.select('div.record_result > table > tbody > tr')
-        player_thead = soup.select('div.record_result > table > thead > tr > th')
-
-        # 행 전체 저장
-        player_tr = []
-
-        # 행 한 줄씩 저장
-        for i in range(len(player_html)):
-            player_tr.append(player_html[i].select('td'))
-
-        # 전체 표
-        player_data = []
-
-        # 모든 내용 뽑기
-        for i in range(len(player_tr)):
-            player_td = player_tr[i]
-            # 한 줄
-            player_line = []
-            for j in range(len(player_td)):
-                # 한 줄 만들기
-                player_line.append(player_td[j].text)
-
-            # 한 줄씩 넣어서 전체 표 만들기
-            player_data.append(player_line)
-
-        # 데이터 프레임 만들기
-        hitter_data_2025 = pd.DataFrame(player_data)
-
-        player_columns = []
-        for i in range(len(player_thead)):
-            player_columns.append(player_thead[i].text)
-
-        hitter_data_2025.columns = player_columns
-        hitter_data_2025 = hitter_data_2025.set_index('순위')
-
-        hitter_data_2025['연도'] = 2025
-
-        return hitter_data_2025
-
-    finally:
-        driver.quit()
-
+    """타자 데이터 크롤링 (requests 사용)"""
+    url = 'https://www.koreabaseball.com/Record/Player/HitterBasic/Basic1.aspx'
+    
+    # 헤더 추가 (403 에러 방지)
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+    }
+    
+    # 페이지 요청
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()  # HTTP 에러 확인
+    
+    # HTML 파싱
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # 테이블 추출
+    table = soup.select_one('div.record_result > table')
+    
+    # 헤더 처리
+    headers = [th.get_text(strip=True) for th in table.select('thead th')]
+    
+    # 행 데이터 처리
+    rows = []
+    for tr in table.select('tbody tr'):
+        row = [td.get_text(strip=True) for td in tr.select('td')]
+        rows.append(row)
+    
+    # DataFrame 생성
+    df = pd.DataFrame(rows, columns=headers)
+    df = df.set_index('순위')
+    df['연도'] = 2025
+    
+    return df
 
 def crawl_pitcher_data():
-    """투수 데이터 크롤링"""
-    driver = setup_driver()
+    """투수 데이터 크롤링 (requests 사용)"""
+    url = 'https://www.koreabaseball.com/Record/Player/PitcherBasic/Basic1.aspx'
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+    }
+    
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    
+    soup = BeautifulSoup(response.text, 'html.parser')
+    table = soup.select_one('div.record_result > table')
+    
+    headers = [th.get_text(strip=True) for th in table.select('thead th')]
+    
+    rows = []
+    for tr in table.select('tbody tr'):
+        row = [td.get_text(strip=True) for td in tr.select('td')]
+        rows.append(row)
+    
+    df = pd.DataFrame(rows, columns=headers)
+    df = df.set_index('순위')
+    df['연도'] = 2025
+    
+    return df
 
-    try:
-        # 접속 링크
-        driver.get('https://www.koreabaseball.com/Record/Player/PitcherBasic/Basic1.aspx')
-        time.sleep(2)  # 페이지 로딩 대기
-
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-        player_html = soup.select('div.record_result > table > tbody > tr')
-        player_thead = soup.select('div.record_result > table > thead > tr > th')
-
-        # 행 전체 저장
-        player_tr = []
-
-        # 행 한 줄씩 저장
-        for i in range(len(player_html)):
-            player_tr.append(player_html[i].select('td'))
-
-        # 전체 표
-        player_data = []
-
-        # 모든 내용 뽑기
-        for i in range(len(player_tr)):
-            player_td = player_tr[i]
-            # 한 줄
-            player_line = []
-            for j in range(len(player_td)):
-                # 한 줄 만들기
-                player_line.append(player_td[j].text)
-
-            # 한 줄씩 넣어서 전체 표 만들기
-            player_data.append(player_line)
-
-        # 데이터 프레임 만들기
-        pitcher_data_2025 = pd.DataFrame(player_data)
-
-        player_columns = []
-        for i in range(len(player_thead)):
-            player_columns.append(player_thead[i].text)
-
-        pitcher_data_2025.columns = player_columns
-        pitcher_data_2025 = pitcher_data_2025.set_index('순위')
-
-        pitcher_data_2025['연도'] = 2025
-
-        return pitcher_data_2025
-
-    finally:
-        driver.quit()
 
 
 def load_historical_data():
