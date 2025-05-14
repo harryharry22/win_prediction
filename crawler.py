@@ -72,7 +72,8 @@ def crawl_hitter_data():
                 hitter_data_2025 = page_df
             else:
                 hitter_data_2025 = pd.concat([hitter_data_2025, page_df])
-
+            return result
+    
     finally:
         # Selenium 종료
         driver.quit()
