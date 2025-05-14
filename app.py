@@ -4,7 +4,7 @@ import data_processor
 import predictor
 
 app = Flask(__name__)
-
+app.config['JSON_AS_ASCII'] = False 
 # 전역 변수로 데이터와 모델 저장
 cached_data = {
     'hitter_data': None,
