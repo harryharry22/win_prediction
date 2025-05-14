@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import io
 import datetime
+import requests
 
 def crawl_hitter_data():
     """타자 데이터 크롤링 (requests 사용)"""
